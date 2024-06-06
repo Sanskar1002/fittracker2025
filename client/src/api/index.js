@@ -2,7 +2,8 @@ import axios from "axios";
 
 const API = axios.create({
   // baseURL: "https://fitnesstrack-vtv1.onrender.com/api/",
-  baseURL: "http://localhost:8080/api/",
+  // baseURL: "http://localhost:8080/api/",
+    baseURL: "https://fittrackr2-0-2.onrender.com/api",
 });
 
 export const UserSignUp = async (data) => API.post("/user/signup", data);
