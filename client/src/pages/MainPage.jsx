@@ -1,10 +1,8 @@
-import { ThemeProvider, styled } from "styled-components";
+import { styled } from "styled-components";
 import logo1 from "../utils/Images/logo1.png";
-import { Link } from "react-router-dom";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 // import App2 from "./App2";
 import Authentication from "./Authentication";
-import { useState, useEffect, useRef } from "react";
+import { useState} from "react";
 import React from "react";
 import TextTransition, { presets } from "react-text-transition";
 
@@ -98,6 +96,9 @@ function MainPage() {
     text-align: center;
   `;
   // const {}
+  let currYear = new Date();
+  currYear = currYear.getFullYear();
+
   return (
     <>
       {show ? (
@@ -125,7 +126,7 @@ function MainPage() {
           </TagLine>
           <Button onClick={() => setShow(!show)}>Lets Gooo !!</Button>
           <CopyRight>
-            <p>copyright © 2024 FitTrackr</p>
+            <p>copyright © {currYear} FitTrackr</p>
             <p>All Rights Reserved</p>
           </CopyRight>
         </Main>

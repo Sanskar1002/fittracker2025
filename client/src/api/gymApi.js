@@ -1,21 +1,6 @@
-// let num = prompt("enter no of exercise ");
-// let exercise = prompt(
-//   "enter the erercise from :back,cardio,chest,neck,shoulders,waist "
-// );
 
-// const url = `https://exercisedb.p.rapidapi.com/exercises/bodyPart/${exercise}?limit=${num}`;
 const url = `https://exercisedb.p.rapidapi.com/exercises/bodyPart/chest?limit=10`;
 
-// let url = ``;
-
-// function fetching() {
-// //   let num = prompt("enter no of exercise ");
-// //   let exercise = prompt(
-// //     "enter the erercise from :back,cardio,chest,neck,shoulders,waist "
-// //   );
-
-//   url = `https://exercisedb.p.rapidapi.com/exercises/bodyPart/${exercise}?limit=${num}`;
-// }
 const options = {
   method: "GET",
   headers: {

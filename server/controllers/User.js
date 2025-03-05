@@ -12,11 +12,11 @@ export const UserRegister = async (req, res, next) => {
     const { email, password, name, img } = req.body;
 
     // Check if the email is in use
-    const existingUser = await User.findOne({ email }).exec();
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return next(createError(409, "Email is already in use."));
     }
-
+ 
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(password, salt);
 
@@ -45,7 +45,7 @@ export const UserLogin = async (req, res, next) => {
     if (!user) {
       return next(createError(404, "User not found"));
     }
-    console.log(user);
+    // console.log(user);
     // Check if password is correct
     const isPasswordCorrect = await bcrypt.compareSync(password, user.password);
     if (!isPasswordCorrect) {
@@ -95,7 +95,7 @@ export const getUserDashboard = async (req, res, next) => {
 
     //Calculate total no of workouts
     const totalWorkouts = await Workout.countDocuments({
-      user: userId,
+      user: user._id,
       date: { $gte: startToday, $lt: endToday },
     });
 
@@ -204,7 +204,7 @@ export const getWorkoutsByDate = async (req, res, next) => {
     );
 
     const todaysWorkouts = await Workout.find({
-      userId: userId,
+      user: userId,
       date: { $gte: startOfDay, $lt: endOfDay },
     });
 
@@ -220,18 +220,88 @@ export const getWorkoutsByDate = async (req, res, next) => {
   }
 };
 
+// export const addWorkout = async (req, res, next) => {
+//   try {
+//     const userId = req.user?.id;
+//     // const userId = req.user?._id;
+//     const { workoutString } = req.body;
+//     if (!workoutString) {
+//       return next(createError(400, "Workout string is missing"));
+//     }
+//     // Split workoutString into lines
+//     const eachworkout = workoutString.split(";").map((line) => line.trim());
+//     // Check if any workouts start with "#" to indicate categories
+//     const categories = eachworkout.filter((line) => line.startsWith("#"));
+//     if (categories.length === 0) {
+//       return next(createError(400, "No categories found in workout string"));
+//     }
+
+//     const parsedWorkouts = [];
+//     let currentCategory = "";
+//     let count = 0;
+
+//     // Loop through each line to parse workout details
+//     await eachworkout.forEach((line) => {
+//       count++;
+//       if (line.startsWith("#")) {
+//         const parts = line?.split("\n").map((part) => part.trim());
+//         console.log(parts);
+//         if (parts.length < 5) {
+//           return next(
+//             createError(400, `Workout string is missing for ${count}th workout`)
+//           );
+//         }
+
+//         // Update current category
+//         currentCategory = parts[0].substring(1).trim();
+//         // Extract workout details
+//         const workoutDetails = parseWorkoutLine(parts);
+//         if (workoutDetails == null) {
+//           return next(createError(400, "Please enter in proper format "));
+//         }
+
+//         if (workoutDetails) {
+//           // Add category to workout details
+//           workoutDetails.category = currentCategory;
+//           workoutDetails.user = userId; ///
+//           parsedWorkouts.push(workoutDetails);
+//         }
+//       } else {
+//         return next(
+//           createError(400, `Workout string is missing for ${count}th workout`)
+//         );
+//       }
+//     });
+
+//     // Calculate calories burnt for each workout
+//     await parsedWorkouts.forEach(async (workout) => {
+//       workout.caloriesBurned = parseFloat(calculateCaloriesBurnt(workout));
+//       // await Workout.create({ ...workout, user: userId });
+//       await Workout.create(workout);
+//     });
+
+//     return res.status(201).json({
+//       message: "Workouts added successfully",
+//       workouts: parsedWorkouts,
+//     });
+//   } catch (err) {
+//     next(err);
+//   }
+// };
+
+
 export const addWorkout = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    // const userId = req.user?._id;
     const { workoutString } = req.body;
+
     if (!workoutString) {
       return next(createError(400, "Workout string is missing"));
     }
-    // Split workoutString into lines
+
     const eachworkout = workoutString.split(";").map((line) => line.trim());
-    // Check if any workouts start with "#" to indicate categories
     const categories = eachworkout.filter((line) => line.startsWith("#"));
+
     if (categories.length === 0) {
       return next(createError(400, "No categories found in workout string"));
     }
@@ -240,45 +310,49 @@ export const addWorkout = async (req, res, next) => {
     let currentCategory = "";
     let count = 0;
 
-    // Loop through each line to parse workout details
-    await eachworkout.forEach((line) => {
+    for (let line of eachworkout) {
       count++;
       if (line.startsWith("#")) {
-        const parts = line?.split("\n").map((part) => part.trim());
-        console.log(parts);
+        const parts = line.split("\n").map((part) => part.trim());
+
         if (parts.length < 5) {
           return next(
             createError(400, `Workout string is missing for ${count}th workout`)
           );
         }
 
-        // Update current category
         currentCategory = parts[0].substring(1).trim();
-        // Extract workout details
         const workoutDetails = parseWorkoutLine(parts);
-        if (workoutDetails == null) {
-          return next(createError(400, "Please enter in proper format "));
+        
+        if (!workoutDetails) {
+          return next(createError(400, "Please enter a proper format"));
         }
 
-        if (workoutDetails) {
-          // Add category to workout details
-          workoutDetails.category = currentCategory;
-          workoutDetails.user = userId; ///
-          parsedWorkouts.push(workoutDetails);
+        workoutDetails.category = currentCategory;
+        workoutDetails.user = userId;
+
+        // **Check if workout already exists for this user**
+        const existingWorkout = await Workout.findOne({
+          user: userId,
+          workoutName: workoutDetails.workoutName,
+        });
+
+        if (existingWorkout) {
+          return next(
+            createError(409, `Workout '${workoutDetails.workoutName}' already exists for this user.`)
+          );
         }
+
+        workoutDetails.caloriesBurned = parseFloat(calculateCaloriesBurnt(workoutDetails));
+        parsedWorkouts.push(workoutDetails);
       } else {
         return next(
           createError(400, `Workout string is missing for ${count}th workout`)
         );
       }
-    });
+    }
 
-    // Calculate calories burnt for each workout
-    await parsedWorkouts.forEach(async (workout) => {
-      workout.caloriesBurned = parseFloat(calculateCaloriesBurnt(workout));
-      // await Workout.create({ ...workout, user: userId });
-      await Workout.create(workout);
-    });
+    await Workout.insertMany(parsedWorkouts);
 
     return res.status(201).json({
       message: "Workouts added successfully",
@@ -292,7 +366,7 @@ export const addWorkout = async (req, res, next) => {
 // Function to parse workout details from a line
 const parseWorkoutLine = (parts) => {
   const details = {};
-  console.log(parts);
+  // console.log(parts);
   if (parts.length >= 5) {
     details.workoutName = parts[1].substring(1).trim();
     details.sets = parseInt(parts[2].split("sets")[0].substring(1).trim());
@@ -301,7 +375,7 @@ const parseWorkoutLine = (parts) => {
     );
     details.weight = parseFloat(parts[3].split("kg")[0].substring(1).trim());
     details.duration = parseFloat(parts[4].split("min")[0].substring(1).trim());
-    console.log(details);
+    // console.log(details);
     return details;
   }
   return null;
